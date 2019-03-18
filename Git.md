@@ -293,6 +293,431 @@ The `git add` and `git commit` commands compose the fundamental Git workflow.
 
 First, you edit your files in the working directory. When you’re ready to save a copy of the current state of the project, you stage changes with `git add`. After you’re happy with the staged snapshot, you commit it to the project history with `git commit`. The `git reset` command is used to undo a commit or staged snapshot.
 
+The primary function of the `git add` command, is to promote pending changes in the working directory, to the `git staging`area. It helps to think of it as a buffer between the working directory and the project history. Instead of committing all of the changes you've made since the last commit, the stage lets you group related changes into highly focused snapshots before actually committing it to the project history. As in any revision control system, it’s important to create atomic commits so that it’s easy to track down bugs and revert changes with minimal impact on the rest of the project.
+
+The `git add` command should not be confused with `svn add`, which adds a file to the repository. Instead, `git add` works on the more abstract level of changes. This means that `git add` needs to be called every time you alter a file, whereas `svn add` only needs to be called once for each file.
+
+Stage all changes in `<file>` for the next commit.
+
+```shell
+git add <file>
+```
+
+Stage all changes in `<directory>` for the next commit.
+
+```shell
+git add <directory>
+```
+
+Begin an interactive staging session that lets you choose portions of a file to add to the next commit. 
+
+```shell
+git add -p
+```
+
+Use `y` to stage the chunk, `n` to ignore the chunk, `s` to split it into smaller chunks, `e` to manually edit the chunk, and `q` to exit.
+
+#### git commit
+
+The `git commit` command captures a snapshot of the project's currently staged changes. Committed snapshots can be thought of as “safe” versions of a project—Git will never change them unless you explicitly ask it to.
+
+While they share the same name, `git commit` is nothing like `svn commit`. In SVN, a commit pushes changes from the local SVN client, to a remote centralized shared SVN repository. In Git, repositories are distributed, Snapshots are committed to the local repository, and this requires absolutely no interaction with other Git repositories. Git commits can later be pushed to arbitrary remote repositories.
+
+At a high-level, Git can be thought of as a timeline management utility. Commits can be thought of as snapshots or milestones along the timeline of a Git project. Snapshots, not differences. A SVN commit consists of a diff compared to the original file added to the repository. Git, on the other hand, records the entire contents of each file in every commit. This makes many Git operations much faster than SVN.
+
+Commit the staged snapshot. This will launch a text editor prompting you for a commit message. 
+
+```shell
+git commit
+```
+
+A shortcut command that immediately creates a commit with a passed commit message. 
+
+```shell
+git commit -m "commit message"
+```
+
+Modify the last commit message.
+
+```shell
+git commit --amend
+```
+
+#### git diff
+
+Diffing is a function that takes two input data sets and outputs the changes between them. These data sources can be commits, branches, files and more. A diff only displays the sections of the file that have changes. 
+
+The remaining diff output is a list of diff 'chunks'. The first line is the chunk header. Each chunk is prepended by a header inclosed within `@@` symbols. `@@ -34,6 +34,8 @@` means 6 lines have been extracted starting from line number 34, 8 lines have been added starting at line number 34. The remaining content of the diff chunk displays the recent changes. `-` indicates changes from the input and `+` indicates changes from output.
+
+Compare changes across the entire repository.
+
+```shell
+git diff
+```
+
+Compare file with local repository, showing the changes that are not staged yet.
+
+```shell
+git diff <file>
+```
+
+Compare the staged file with repository, showing the changes that has been staged.
+
+```shell
+git diff --cached <file>
+git diff --staged <file>
+```
+
+Compare files between towo different commmit/branch.
+
+```shell
+git diff <commit-ID1/branch1> <commit-ID2/branch2>
+```
+
+Comparing files from two branches
+
+```shell
+git diff <commit-ID1/branch1> <commit-ID2/branch2> <file>
+```
+
+#### git stash
+
+Git has an additional saving mechanism called 'the stash'. The stash is an ephemeral storage area for changes that are not ready to be committed. `git stash` temporarily shelves (or *stashes*) changes you've made to your working copy so you can work on something else, and then come back and re-apply them later on. 
+
+The `git stash` command takes your uncommitted changes (both staged and unstaged), saves them away for later use, and then reverts them from your working copy.
+
+```shell
+git stash
+```
+
+Reapply previously stashed changes. Popping your stash removes the changes from your stash and reapplies them to your working copy.
+
+```shell
+git stash pop
+```
+
+Alternatively, you can reapply the changes to your working copy *and* keep them in your stash.
+
+```shell
+git stash apply
+```
+
+By default Git *won't* stash changes made to untracked or ignored files. It will stash changes that have been added to your index (staged changes), and changes made to files that are currently tracked by Git (unstaged changes).
+
+To stash untracked files.
+
+```shell
+git stash -u 
+```
+
+To stash untracked or ignored files.
+
+```shell
+git stash -all
+```
+
+You can run `git stash` several times to create multiple stashes, and then use `git stash list` to view them.
+
+```shell
+git stash list
+```
+
+By default, stashes are identified simply as a "WIP" – work in progress – on top of the branch and commit that you created the stash from. 
+
+After a while it can be difficult to remember what each stash contains. To provide a bit more context, it's good practice to annotate your stashes with a description.
+
+```shell
+git stash save "description help remember"
+```
+
+By default, `git stash pop` will re-apply the most recently created stash:  `stash@{0}`. You can choose which stash to re-apply by passing its identifier as the last argument.
+
+```shell
+git stash pop stash@{2}
+```
+
+View stash diffs. `git stash show` for a summary of a stash. Pass the `-p` option (or `--patch`) to view the full diff of a stash
+
+```shell
+git stash show -p
+```
+
+You can also choose to stash just a single file, a collection of files, or individual changes from within files. it will iterate through each changed "hunk" in your working copy and ask whether you wish to stash it.
+
+```shell
+git stash -p
+```
+
+`/`: search for a hunk by regex, `?`: help, `n`:  don't stash this hunk, `q`: quit (any hunks that have already been selected will be stashed), `s`: split this hunk into smaller hunks, `y`: stash this hunk. `CTRL-C` will abort the stash process.
+
+Stashes are actually encoded in your repository as commit objects. A stash itself is a commit saving changes of tracked files, with 3 parents: the pre-existing commit, a commit saving staged changes, a commit saving changes of untracked files and ignored files.
+
+#### .gitignore
+
+Ignored files are usually build artifacts and machine generated files that can be derived from your repository source or should otherwise not be committed.
+
+Ignored files are tracked in a special file named `.gitignore` that is checked in at the root of your repository. It contain patterns that are matched against file names in your repository to determine whether or not they should be ignored.
+
+```shell
+**/logs				# 匹配所有目录下名为logs的目录，忽略logs目录及其内部所有文件
+**/logs/debug.log	# 匹配所有目录下名为logs的目录，忽略期内debug.log文件
+*.log				# 匹配并忽略所有后缀为.log的文件
+!important.log		# 不匹配所有目录下的important.log文件
+/debug.log			# 仅匹配根目录下的debug.log文件
+debug.log			# 匹配并忽略所有目录下的debug.log文件
+debug?.log			# ？指代任意一个字母，匹配并忽略所有目录下匹配的文件
+debug[0-9].log		# [0-9]指代0-9内任意一个数字，匹配并忽略所有目录下匹配的文件
+debug[01].log		# [01]指代字符0或1，匹配并忽略所有目录下匹配的文件
+debug[!01].log		# [!01]指代一个非0和1的字符，匹配并忽略所有目录下匹配的文件
+debug[a-z].log		# [a-z]指代a-z内任意一个字母，匹配并忽略所有目录下匹配的文件
+logs				# 匹配并忽略所有目录下名为logs的目录或文件，若为目录则同样忽略其内部所有文件
+logs/				# 匹配并忽略所有目录下名为logs的目录，忽略其内部所有文件
+logs/**/debug.log	# **可指代0个或1个目录，匹配并忽略所有目录下匹配的文件
+logs/*day/debug.log	# *指代0或多个字符，匹配并忽略所有目录下匹配的文件
+logs/debug.log		# 仅匹配根目录的logs/debug.log文件
+```
+
+You can use \ to escape `.gitignore` pattern characters if you have files or directories containing them.
+
+you can define global Git ignore patterns for all repositories on your local system.
+
+```shell
+git config --global core.excludesFile ~/.gitignore
+```
+
+If you want to ignore a file that you've committed in the past, you'll need to delete the file from your repository and then add a `.gitignore` rule for it. Using the `--cached` option with `git rm`means that the file will be deleted from your repository, but will remain in your working directory as an ignored file.
+
+```shell
+echo debug.log >> .gitignore
+git rm --cached debug.log
+rm 'debug.log'
+git commit -m "Start ignoring debug.log"
+```
+
+It is possible to force an ignored file to be committed to the repository using the `-f` (or `--force`) option with `git add`.
+
+```shell
+git add -f debug.log
+```
+
+### Inspecting a repository
+
+####git status
+
+The `git status` command displays the state of the working directory and the staging area. t lets you see which changes have been staged, which haven’t, and which files aren’t being tracked by Git.
+
+#### git log
+
+The `git log` command displays committed snapshots. 
+
+Display the entire commit history using the default formatting.
+
+```shell
+git log
+```
+
+Limit the number of commits by `<limit>`. 
+
+```shell
+git log -n <limit>
+```
+
+Only display commits that include the specified file.
+
+```shell
+git log <file>
+```
+
+Display the patch representing each commit. 
+
+```shell
+git log -p
+```
+
+Display the commits that contain or remove pattern.
+
+```shell
+git log -S "pattern"
+```
+
+Search for commits with a commit message that matches `<pattern>`
+
+```shell
+git log --grep="<pattern>"
+```
+
+A few useful options to consider.  
+
+```shell
+git log --graph --decorate --oneline
+```
+
+View all commits across all branches.
+
+```shell
+git log --branches=*
+```
+
+建议安装qgit看commit历史。
+
+#### git tag
+
+Tags are ref's that point to specific points in Git history. Tagging is generally used to capture a point in history that is used for a marked version release.
+
+Git supports two different types of tags, annotated and lightweight tags.
+
+Lightweight tags are essentially 'bookmarks' to a commit, they are just a name and a pointer to a commit, useful for creating quick links to relevant commits.
+
+To create a new lightweight  tag execute the following command
+
+```shell
+git tag <tagname>
+```
+
+Annotated tags store extra meta data such as: the tagger name, email, and date. Similar to commits and commit messages , annotated tags have a tagging message. 
+
+```shell
+git tag -a v1.4
+git tag -a v1.4 -m "my version 1.4"
+```
+
+To list stored tags in a repo.
+
+```shell
+git tag
+```
+
+To refine the list of tags the `-l` option can be passed with a wild card expression.
+
+```shell
+git tag -l *-rc*
+```
+
+Tagging old commits.
+
+```shell
+git tag -a v1.2 15027957951b64cf874c3557a0f3547bd83b3ff6
+```
+
+Create a tag with the same identifier as an existing tag. It will override old tag.
+
+```shell
+git tag -a -f v1.4 15027957951b64cf874c3557a0f3547bd83b3ff6
+```
+
+Sharing tags is similar to pushing branches. By default, `git push`will not push tags. Tags have to be explicitly passed to `git push`.
+
+```shell
+git push origin v1.4
+```
+
+Checking out tags.
+
+```shell
+git checkout v1.4
+```
+
+The above command will checkout the `v1.4` tag. This puts the repo in a detached `HEAD` state. This means any changes made will not update the tag. They will create a new detached commit. This new detached commit will not be part of any branch and will only be reachable directly by the commits SHA hash. Therefore it is a best practice to create a new branch anytime you're making changes in a detached `HEAD` state.
+
+Deleting tags.
+
+```shell
+git tag -d v1
+```
+
+#### git blame
+
+The high-level function of `git blame` is the display of author metadata attached to specific committed lines in a file. This is used to examine specific points of a file's history and get context as to who the last author was that modified the line. `Git blame` is often used with a GUI display.
+
+`git blame` only operates on individual files.
+
+```shell
+git blame <file>
+```
+
+`git blame`列出文件的内容，并指出每一行最后是由谁什么时间在哪次提交中修改的。
+
+The `-L` option will restrict the output to the requested line range. 
+
+```shell
+git blame -L 1,5 README.md
+```
+
+The `-w` option ignores whitespace changes.
+
+```shell
+git blame -w README.md
+```
+
+#### Undoing Commits & Changes
+
+When 'undoing' in Git, you are usually moving back in time, or to another timeline where mistakes didn't happen.
+
+#### git checkout
+
+Review a commit or a branch.
+
+```shell
+git checkout <branch/commitID>
+```
+
+Checking out a specific commit will put the repo in a "detached HEAD" state. This means you are no longer working on any branch. In a detached state, any new commits you make will be orphaned when you change branches back to an established branch. Orphaned commits are up for deletion by Git's garbage collector. The garbage collector runs on a configured interval and permanently destroys orphaned commits. To prevent orphaned commits from being garbage collected, we need to ensure we are on a branch.
+
+Create a branch at this point.
+
+```shell
+git checkout -b <new_branch>
+```
+
+#### git clean
+
+`Git clean` can be considered complementary to other commands like `git reset` and `git checkout`. Whereas these other commands operate on files previously added to the Git tracking index, the `git clean` command operates on untracked files.
+
+By default, Git is globally configured to require that `git clean` be passed a "force" option to initiate. This is an important safety mechanism. When finally executed `git clean` is not undo-able. 
+
+The `-n` option will perform a “dry run” of `git clean`. This will show you which files are going to be removed without actually removing them.
+
+```shell
+git clean -n
+```
+
+The `-f` option initiates the actual deletion of untracked files from the current directory, not iteratively. Additionally, a <path> value can be passed with the `-f` option that will remove a specific file.
+
+```shell
+git clean -f
+git clean -f <path>
+```
+
+The `-d` option tells `git clean` that you also want to remove any untracked directories, by default it will ignore directories. 'Dry run' first is a best practice.
+
+```shell
+git clean -dn
+git clean -df
+```
+
+The `-x` option tells `git clean` to also include any ignored files. 
+
+```shell
+git clean -xn
+git clean -xf
+```
+
+The `-X` option tells `git clean` to only include any ignored files. 
+
+```shell
+git clean -Xn
+git clean -Xf
+```
+
+the `-i` option tells  `git clean` to behave in "interactive" mode.
+
+```shell
+git clean -di
+```
+
+#### git revert
+
+The `git revert` command can be considered an 'undo' type command, however, it is not a traditional undo operation. Instead of removing the commit from the project history, it figures out how to invert the changes introduced by the commit and appends a new commit with the resulting inverse content. This prevents Git from losing history, which is important for the integrity of your revision history and for reliable collaboration.
 
 
 
@@ -301,7 +726,12 @@ First, you edit your files in the working directory. When you’re ready to save
 
 
 
-Git has an additional saving mechanism called 'the stash'. The stash is an ephemeral storage area for changes that are not ready to be committed. 
+
+
+
+Doing a reset is great for local changes however it adds complications when working with a shared remote repository. If we have a shared remote repository that has the `872fa7e` commit pushed to it, and we try to `git push` a branch where we have reset the history, Git will catch this and throw an error. Git will assume that the branch being pushed is not up to date because of it's missing commits. In these scenarios, `git revert` should be the preferred undo method.
+
+
 
 
 
@@ -310,4 +740,6 @@ Git has an additional saving mechanism called 'the stash'. The stash is an ephem
 1. 
 2. [GIT团队合作探讨之二--Pull Request](https://www.cnblogs.com/kidsitcn/p/5319282.html)
 3. [Git 内部原理 - Git References](https://git-scm.com/book/zh/v1/Git-%E5%86%85%E9%83%A8%E5%8E%9F%E7%90%86-Git-References)
-4. 
+4. [Git快照(snapshot)到底该如何理解？或者说如何从文件系统的角度理解快照(snapshot)?](https://segmentfault.com/q/1010000008914409)
+5. [为什么你的 Git 仓库变得如此臃肿](https://www.jianshu.com/p/7231b509c279)
+6. 
