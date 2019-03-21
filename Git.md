@@ -317,6 +317,15 @@ git add -p
 
 Use `y` to stage the chunk, `n` to ignore the chunk, `s` to split it into smaller chunks, `e` to manually edit the chunk, and `q` to exit.
 
+`git add` will change the stage index. `git ls-files -s` to show the snapshot id of stage index.
+
+```shell
+$ git ls-files -s
+100644 67cc52710639e5da6b515416fd779d0741e3762e 0 reset_lifecycle_file
+$ git add reset_lifecycle_file
+100644 d7d77c1b04b5edd5acfc85de0b592449e5303770 0 reset_lifecycle_file
+```
+
 #### git commit
 
 The `git commit` command captures a snapshot of the project's currently staged changes. Committed snapshots can be thought of as “safe” versions of a project—Git will never change them unless you explicitly ask it to.
@@ -378,6 +387,25 @@ Comparing files from two branches
 
 ```shell
 git diff <commit-ID1/branch1> <commit-ID2/branch2> <file>
+```
+
+Diff the current master branch against 4 commit before master.
+
+```
+git diff master@{0} master@{4}
+```
+
+Every reflog entry has a timestamp attached to it. These timestamps can be leveraged as the `qualifier` token of Git ref pointer syntax. This enables filtering Git reflogs by time. eg. 
+
+```
+1.hour.ago		1.day.ago	yesterday	1.week.ago	1.month.ago
+2011-05-17.09:00:00
+```
+
+Diff the current master branch against master 1 day ago.
+
+```shell
+git diff master@{0} master@{1.day.ago}
 ```
 
 #### git stash
@@ -649,9 +677,17 @@ The `-w` option ignores whitespace changes.
 git blame -w README.md
 ```
 
-#### Undoing Commits & Changes
+### Undoing Commits & Changes
 
 When 'undoing' in Git, you are usually moving back in time, or to another timeline where mistakes didn't happen.
+
+To properly understand `changes, we must first understand Git's internal state management systems. Sometimes these mechanisms are called Git's "three trees".
+
+The first tree we will examine is "The Working Directory". This tree is in sync with the local filesystem and is representative of the immediate changes made to content in files and directories.
+
+Next up is the 'Staging Index' tree. This tree is tracking Working Directory changes, that have been promoted with `git add`, to be stored in the next commit.
+
+ The final tree is the Commit History. The `git commit` command adds changes to a permanent snapshot that lives in the Commit History. This snapshot also includes the state of the Staging Index at the time of commit.
 
 #### git checkout
 
@@ -667,6 +703,18 @@ Create a branch at this point.
 
 ```shell
 git checkout -b <new_branch>
+```
+
+`git checkout` can also be used to drop changes.
+
+```shell
+git checkout -- <file>
+```
+
+`-f` option will drop all changes of working directory and staged index. It has the same performance with `git reset --hard HEAD`.
+
+```shell
+git checkout -f
 ```
 
 #### git clean
@@ -719,27 +767,685 @@ git clean -di
 
 The `git revert` command can be considered an 'undo' type command, however, it is not a traditional undo operation. Instead of removing the commit from the project history, it figures out how to invert the changes introduced by the commit and appends a new commit with the resulting inverse content. This prevents Git from losing history, which is important for the integrity of your revision history and for reliable collaboration.
 
+It's **important** to understand that `git revert` undoes a **single** commit—it does not "revert" back to the previous state of a project by removing all subsequent commits. 
 
+`git revert` is able to target an individual commit at an arbitrary point in the history, whereas `git reset` can only work backward from the current commit. For example, if you wanted to undo an old commit with `git reset`, you would have to remove all of the commits that occurred after the target commit, remove it, then re-commit all of the subsequent commits. Needless to say, this is not an elegant undo solution.
 
+To revert the latest change.
 
+```shell
+git revert HEAD
+```
 
+To revert the change of a specfied commit.
 
+```shell
+git revert <commitID>
+```
 
+若两次提交在相同位置添加或修改，revert到第一次提交时会产生conflict。相同位置修改会产生冲突已理解，连续添加的情况还不能理解。
 
+If revert make conflict, modify the both modified file, then add it and continue reverting.
 
+```shell
+git revert <commitID>
+git add <conflicted_file>
+git revert --continue
+```
 
+The revert will not open the editor.
+
+```shell
+git revert -e <commitID>
+```
+
+Passing `-n` will prevent `git revert` from creating a new commit that inverses the target commit. Instead of creating the new commit this option will add the inverse changes to the Staging Index and Working Directory. 
+
+```shell
+git revert -n <commitID>
+```
+
+#### git reset
+
+The `git reset` command is a complex and versatile tool for undoing changes. It has three primary forms of invocation. These forms correspond to command line arguments `--soft, --mixed, --hard`, which direct how to modify the Staging Index, and Working Directory trees.
+
+`--hard`  is the most direct, DANGEROUS, and frequently used option. When passed `--hard` The Commit History ref pointers are updated to the specified commit. Then, the Staging Index and Working Directory are reset to match that of the specified commit. All pending work in Staging Index and Working Directory will lost.
+
+`--mixed` is the default operating mode. The ref pointers are updated. The Staging Index is reset to the state of the specified commit. Any changes that have been undone from the Staging Index are moved to the Working Directory.
+
+`--soft` is the weakest operating mode. The ref pointers are updated and the reset stops there. The Staging Index and the Working Directory are left untouched. However, as a reminder, `git status` does not show the state of 'the three trees', it essentially shows a diff between them. In this case, it is displaying that the Staging Index is ahead of the changes in the Commit History as if we have already staged them.
+
+The default invocation of `git reset` has implicit arguments of `--mixed` and `HEAD`. 
+
+```shell
+git reset
+```
+
+More general
+
+```shell
+git reset --<option> <commitID>
+```
 
 Doing a reset is great for local changes however it adds complications when working with a shared remote repository. If we have a shared remote repository that has the `872fa7e` commit pushed to it, and we try to `git push` a branch where we have reset the history, Git will catch this and throw an error. Git will assume that the branch being pushed is not up to date because of it's missing commits. In these scenarios, `git revert` should be the preferred undo method.
 
+Whereas reverting is designed to safely undo a public commit, `git reset` is designed to undo local changes to the Staging Index and Working Directory. Because of their distinct goals, the two commands are implemented differently: resetting completely removes a changeset, whereas reverting maintains the original changeset and uses a new commit to apply the undo.
 
+#### git rm
 
+The `git rm`command is used to remove files from a Git repository. It can be thought of as the inverse of the `git add` command.  It tells Git not to track a file (or files) any more.
 
+The `git rm` command operates on the current branch only. The file removal is not persisted to the repository history until a new commit is created.
+
+Like `git clean`, `git rm` also have a "dry run" mode.
+
+```shell
+git rm -n <files>...
+```
+
+The `-r` option is shorthand for 'recursive'.
+
+```shell
+git -r <files>...
+```
+
+The `-f `option is used to override the safety check.
+
+````shell
+git -f <files>...
+````
+
+The cached option specifies that the removal should happen only on the staging index. Working directory files will be left alone.
+
+```shell
+git --cached <files>...
+```
+
+Executing `git rm` is not a permanent update. The command will update the staging index and the working directory. These changes will not be persisted until a new commit is created and the changes are added to the commit history. This means that the changes here can be "undone" using common Git commands.
+
+A reset will revert the current staging index and working directory back to the `HEAD` commit.
+
+```shell
+git reset HEAD
+```
+
+A checkout will have the same effect and restore the latest version of a file from `HEAD`.
+
+```shell
+git checkout .
+```
+
+### Rewinding history
+
+Git has several mechanisms for storing history and saving changes. These mechanisms include: Commit `--amend`, `git rebase` and `git reflog`.
+
+#### git commit --amend
+
+The `git commit --amend` command is a convenient way to modify the most recent commit. It can be used to simply edit the previous commit message without changing its snapshot. It also lets you combine staged changes with the previous commit instead of creating an entirely new commit. But, amending does not just alter the most recent commit, it replaces it entirely, meaning the amended commit will be a new entity with its own ref. 
+
+Let's say you just committed and you made a mistake in your commit log message. Running this command when there is nothing staged lets you edit the previous commit’s message without altering its snapshot.
+
+```shell
+git add a.file
+git commit -m "add x.file"
+git commit --amend -m "add a.file"
+```
+
+Let's say we've edited a few files that we would like to commit in a single snapshot, but then we forget to add one of the files the first time around. Fixing the error is simply a matter of staging the other file and committing with the `--amend` flag.
+
+```shell
+git add a.file
+git commit -m "add a.file b.file"
+git add b.file
+git commit --amend --no-edit
+```
+
+Amended commits are actually entirely new commits and the previous commit will no longer be on your current branch. This has the same consequences as resetting a public snapshot. Don’t amend public commits.
+
+#### git rebase
+
+Rebasing is the process of moving or combining a sequence of commits to a new base commit. From a content perspective, rebasing is changing the base of your branch from one commit to another making it appear as if you'd created your branch from a different commit.
+
+Internally, Git accomplishes this by creating new commits and applying them to the specified base. It's very important to understand that even though the branch looks the same, it's composed of entirely new commits.
+
+The primary reason for rebasing is to maintain a linear project history. For example, consider a situation where the master branch has progressed since you started working on a feature branch. You want to get the latest updates to the master branch in your feature branch, but you want to keep your branch's history clean so it appears as if you've been working off the latest master branch. This gives the later benefit of a clean merge of your feature branch back into the master branch. 
+
+![Git tutorial: Git rebase](https://wac-cdn.atlassian.com/dam/jcr:e4a40899-636b-4988-9774-eaa8a440575b/02.svg?cdnVersion=le)
+
+Rebasing is a common way to integrate upstream changes into your local repository. Pulling in upstream changes with Git merge results in a superfluous merge commit every time you want to see how the project has progressed. On the other hand, rebasing is like saying, “I want to base my changes on what everybody has already done.”
+
+You should never rebase commits once they've been pushed to a public repository. The rebase would replace the old commits with new ones and it would look like that part of your project history abruptly vanished.
+
+Git rebase in standard mode will automatically take the commits in your current working branch and apply them to the head of the passed branch.
+
+```shell
+git rebase <base>
+```
+
+Git rebase in an interactive mode will gives you the opportunity to alter individual commits in the process.
+
+```shell
+git rebase -i <base>
+```
+
+During a rebase, you can run a few commands on commits to modify commit messages.
+
+- Reword or 'r' will stop rebase playback and let you rewrite the individual commit message during.
+- Squash or 's' during rebase playback, any commits marked `s`will be paused on and you will be prompted to edit the separate commit messages into a combined message. More on this in the squash commits section below.
+- Fixup or 'f' has the same combining effect as squash. Unlike squash, fixup commits will not interrupt rebase playback to open an editor to combine commit messages. The commits marked 'f' will have their messages discarded in-favor of the previous commit's message.
+
+Most developers like to use an interactive rebase to polish a feature branch before merging it into the main code base. This gives them the opportunity to squash insignificant commits, delete obsolete ones, and make sure everything else is in order before committing to the “official” project history. To everybody else, it will look like the entire feature was developed in a single series of well-planned commits.
+
+`git rebase --onto` can change the base of a branch.
+
+```shell
+git rebase --onto <new_base> <old_base> <branch>
+```
+
+One caveat to consider when working with Git Rebase is merge **conflicts** may become more frequent during a rebase workflow. The `--continue` and `--abort` command line arguments can be passed to `git rebase` to advance or reset the the rebase when dealing with conflicts.
+
+A more serious rebase caveat is lost commits from interactive history rewriting. Running rebase in interactive mode and executing subcommands like squash or drop will remove commits from your branche's immediate log. 
+
+#### git reflog
+
+Git keeps track of updates to the tip of branches using a mechanism called reference logs, or "reflogs." In addition to branch tip reflogs, a special reflog is maintained for the Git stash. 
+
+The most basic Reflog use case is invoking `git reflog `, which  is essentially a short cut that's equivalent to
+
+```shell
+git reflog
+git reflog show HEAD
+```
+
+By default, `git reflog` will output the reflog of the `HEAD` ref. `HEAD`is a symbolic reference to the currently active branch. 
+
+Reflogs are available for other refs as well. The syntax to access a git ref is `name@{qualifier}`. In addition to `HEAD` refs, other branches, tags, remotes, and the Git stash can be referenced as well.
+
+```shell
+git reflog show <other_branch>
+```
+
+You can get a complete reflog of all refs by executing:
+
+```shell
+git reflog show -all
+```
+
+To output a reflog for the Git stash.
+
+```shell
+git reflog stash
+```
+
+## Collaborating
+
+### Syncing
+
+SVN uses a single centralized repository to serve as the communication hub for developers, and collaboration takes place by passing changesets between the developers’ working copies and the central repository.  Users commit a changeset from a working copy to the central repository.
+
+This is different from Git's distributed collaboration model, which gives every developer their own copy of the repository, complete with its own local history and branch structure. Users typically need to share a series of commits rather than a single changeset. In addtion, Git lets you share entire branches between repositories.
+
+#### git remote
+
+The `git remote` command lets you create, view, and delete connections to other repositories. 
+
+The `git remote` command is essentially an interface for managing a list of remote entries that are stored in the repository's `./.git/config` file.
+
+List the remote connections you have to other repositories. Pass `-v` will include the URL of each connection.
+
+```shell
+git remote -v
+```
+
+Create a new connection to a remote repository. 
+
+```shell
+git remote add <name> <url>
+```
+
+Remove the connection to the remote repository called `<name>`.
+
+```shell
+git remote rm <name>
+```
+
+Rename a remote connection from <old-name> to <new-name>.
+
+```shell
+git remote rename <old-name> <new-name>
+```
+
+Modify a remote connection URL
+
+```shell
+git remote set-url <name> <new_url>
+```
+
+#### git fetch
+
+The `git fetch` command downloads commits, files, and refs from a remote repository into your local repo. Fetching is what you do when you want to see what everybody else has been working on. 
+
+It doesn’t force you to actually merge the changes into your repository. Git isolates fetched content as a from existing local content, it has absolutely no effect on your local development work. Fetched content has to be explicitly checked out using the `git checkout` command.
+
+The refs for local branches are stored in the `./.git/refs/heads/`. Remote branch refs live in the `./.git/refs/remotes/` directory.
+
+Fetch all of the branches from the repository. This also downloads all of the required commits and files from the other repository.
+
+```shell
+git fetch <remote>
+```
+
+Only fetch the specified branch.
+
+```shell
+git fetch <remote> <branch>
+```
+
+The `--dry-run` option will perform a demo run of the command. I will output examples of actions it will take during the fetch but not apply them.
+
+```shell
+git fetch --dry-run
+```
+
+Demo: fetch a branch and make a new branch
+
+```shell
+git fetch origin feature_branch
+git checkout origin/feature_branch
+git checkout -b <new_branch_name>
+# or
+git fetch origin feature_branch:<new_branch_name>
+```
+
+Demo: fetch a branch and merge to a local branch
+
+```shell
+git checkout <local_branch>
+git fetch origin feature_branch
+git log origin/feature_branch
+git merge feature_branch
+```
+
+#### git push
+
+The `git push` command is used to upload local repository content to a remote repository. Pushing is how you transfer commits from your local repository to a remote repo.
+
+Push the specified branch to <remote>, along with all of the necessary commits and internal objects. 
+
+```shell
+git push <remote> <branch>
+```
+
+To prevent you from overwriting commits, Git won’t let you push when it results in a non-fast-forward merge in the destination repository. Pass `-f` will force the push even if it results in a non-fast-forward merge.
+
+```shell
+git push <remote> --force
+```
+
+Tags are not automatically pushed when you push a branch. The `--tags` flag sends all of your local tags to the remote repository.
+
+```shell
+git push <remote> <tag_name>
+git push <remote> --tags
+```
+
+One of the standard methods for publishing local contributions to the central repository. 
+
+```shell
+git checkout master
+git fetch origin master
+git rebase -i origin/master
+# Squash commits, fix up commit messages etc.
+git push origin master
+```
+
+Modify the recent upload commit. But make sure none of your teammates have pulled the commit before using the `--force`option.
+
+```shell
+# make changes to a repo and git add
+git commit --amend
+# update the existing commit message
+git push --force origin master
+```
+
+To delete a remote branch.
+
+```shell
+git push <remote> --delete <branch>
+```
+
+#### git pull
+
+The `git pull` command is used to fetch and download content from a remote repository and immediately update the local repository to match that content.
+
+The `git pull` command is actually a combination of two other commands, `git fetch` followed by `git merge`. 
+
+Fetch the specified remote’s copy of the current branch and immediately merge it into the local copy.
+
+```shell
+git pull remote
+```
+
+Fetches the remote content and merge, but does not create a new commit at once.
+
+```shell
+git pull --no-commit <remote>
+```
+
+Fetches the remote content, and repeat all the changes and commit again on the local branch. NOTICE, these are totally new commit which GIT will serve them as the different commits with the remote commits.
+
+```shell
+git pull --rebase <remote>
+```
+
+### Using branches
+
+Branching is a feature available in most modern version control systems. Branching in other VCS's can be an expensive operation in both time and disk space. Git branches are effectively a pointer to a snapshot of your changes.
+
+#### git branch
+
+When you want to add a new feature or fix a bug—no matter how big or how small—you spawn a new branch to encapsulate your changes. This makes it harder for unstable code to get merged into the main code base, and it gives you the chance to clean up your future's history before merging it into the main branch. By developing them in branches, it’s not only possible to work on both of them in parallel, but it also keeps the main `master` branch free from questionable code.
+
+It's important to understand that branches are just pointers to commits. When you create a branch, all Git needs to do is create a new pointer.
+
+Executing the `git branch` command will output a list of the local branch refs. 
+
+```shell
+git branch
+```
+
+Pass `-r` option will output a list of remote refs.
+
+```shell
+git branch -r
+```
+
+Create a new branch called `<branch>`. This does *not* check out the new branch.
+
+```shell
+git branch <branch_name>
+```
+
+Delete the specified branch. This is a “safe” operation in that Git prevents you from deleting the branch if it has unmerged changes.
+
+```shell
+git branch -d <branch_name>
+```
+
+Force delete the specified branch, even if it has unmerged changes.
+
+```shell
+git branch -D <branch_name>
+```
+
+Rename the current branch to `<new_branch_name>`.
+
+```shell
+git branch -m <new_branch_name
+```
+
+#### git checkout
+
+In Git terms, a "checkout" is the act of switching between different versions of a target entity. The `git checkout` command operates upon three distinct entities: files, commits, and branches.
+
+Checking out a branch updates the files in the working directory to match the version stored in that branch, and it tells Git to record all new commits on that branch. 
+
+Switch to a specified branch.
+
+```shell
+git checkout <existing-branch>
+```
+
+Create the new branch and immediately switch to it. 
+
+```shell
+git checkout -b <new-branch>
+```
+
+By default `git checkout -b` will base the `new-branch` off the current `HEAD`. An optional additional branch parameter can be passed to `git checkout`.
+
+```shell
+git checkout <existing-branch> -b <new-branch>
+```
+
+Additionally you can checkout a new local branch and reset it to the remote branches last commit.
+
+```shell
+git checkout -b <branchname>
+git reset --hard origin/<branchname>
+```
+
+`HEAD` is Git’s way of referring to the current snapshot. Internally, the `git checkout` command simply updates the `HEAD` to point to either the specified branch or commit. When it points to a branch, Git doesn't complain, but when you check out a commit, it switches into a `“detached HEAD”` state. All your work make on a `detached HEAD`, can not be get back if you check out another branch.
+
+#### git merge
+
+Merging is Git's way of putting a forked history back together again. The `git merge` command lets you take the independent lines of development created by `git branch` and integrate them into a single branch.
+
+`git merge` takes two commit pointers, usually the branch tips, and will find a common base commit between them. Once Git finds a common base commit it will create a new "merge commit" that combines the changes of each queued merge commit sequence. 
+
+A fast-forward merge can occur when there is a linear path from the current branch tip to the target branch. Instead of “actually” merging the branches, all Git has to do is move the current branch tip up to the target branch tip. 
+
+However, a fast-forward merge is not possible if the branches have diverged. When there is not a linear path to the target branch, Git has no choice but to combine them via a 3-way merge. 3-way merges use three commits to generate the merge commit: the two branch tips and their common ancestor.
+
+While you can use either of these merge strategies, many developers like to use fast-forward merges (facilitated through [rebasing](https://www.atlassian.com/git/tutorials/rewriting-history/git-rebase)) for small features or bug fixes, while reserving 3-way merges for the integration of longer-running features. In the latter case, the resulting merge commit serves as a symbolic joining of the two branches.
+
+Demo: a fast-forward merge
+
+```shell
+# Start a new feature
+git checkout -b new-feature master
+# Edit some files
+git add <file>
+git commit -m "Start a feature"
+# Edit some files
+git add <file>
+git commit -m "Finish a feature"
+# Merge in the new-feature branch
+git checkout master
+git merge new-feature
+git branch -d new-feature
+```
+
+Demo: 3-way merge
+
+```shell
+Start a new feature
+git checkout -b new-feature master
+# Edit some files
+git add <file>
+git commit -m "Start a feature"
+# Edit some files
+git add <file>
+git commit -m "Finish a feature"
+# Develop the master branch
+git checkout master
+# Edit some files
+git add <file>
+git commit -m "Make some super-stable changes to master"
+# Merge in the new-feature branch
+git merge new-feature
+git branch -d new-feature
+```
+
+You can require a merge commit during a fast forward merge for record keeping purposes, by executing `git merge` with the `--no-ff`option.
+
+```shell
+git merge --no-ff <branch>
+```
+
+If the two branches you're trying to merge both changed the same part of the same file, Git won't be able to figure out which version to use. When such a situation occurs, it stops right before the merge commit so that you can resolve the conflicts manually.
+
+Once you've identified conflicting sections, you can go in and fix up the merge to your liking. When you're ready to finish the merge, all you have to do is run `git add` on the conflicted file(s) to tell Git they're resolved. Then, you run a normal `git commit` to generate the merge commit.
+
+### Comparing workflows
+
+A Git Workflow is a recipe or recommendation for how to use Git to accomplish work in a consistent and productive manner. 
+
+#### Centralized Workflow
+
+The Centralized Workflow is a great Git workflow for teams transitioning from SVN.
+
+The default development branch is called `master` and all changes are committed into this branch. This workflow doesn’t require any other branches besides `master`.
+
+```shell
+# John make some work
+John:  git add <file>
+John:  git commit -m "John make a commit"
+# John push his work to central repo
+John:  git push origin master
+# Mary make some work
+Mary:  git add <file>
+Mary:  git commit -m "Mary make a commit"
+# Mary pull other's work from central repo
+Mary:  git pull --rebase origin master
+# Maybe there's conflict, fix it
+Mary:  git add <conflict-file>
+Mary:  git rebase --continue
+# Mary push his work to central repo
+Mary:  git push origin master
+```
+
+#### Feature Branch Workflow
+
+The core idea behind the Feature Branch Workflow is that all feature development should take place in a dedicated branch instead of the `master` branch.
+
+This encapsulation makes it easy for multiple developers to work on a particular feature without disturbing the main codebase. It also means the `master` branch will never contain broken code, which is a huge advantage for continuous integration environments.
+
+The Feature Branch Workflow assumes a central repository, and `master` represents the official project history. Instead of committing directly on their local `master` branch, developers create a new branch every time they start work on a new feature. Feature branches should have descriptive names, like animated-menu-items or issue-#1061. Feature branches can (and should) be pushed to the central repository. This makes it possible to share a feature with other developers without touching any official code.
+
+```shell
+# set up local repo
+git checkout master
+git fetch origin
+git reset --hard origin/master
+# create a branch for new feature
+git checkout -b new-feature
+git push -u origin new-feature
+# make some work
+git add <files>
+git commit -m "make some work"
+git push [origin] [new-feature]
+# pull request or other method, code review
+# modify work
+git add <files>
+git commit -m "modify work"
+git push [origin] [new-feature]
+# publish new feature
+git checkout master
+git pull [origin] [master]
+git pull origin new-feature
+git push [origin] [master]
+```
+
+#### Gitflow Workflow
+
+The Gitflow Workflow defines a strict branching model designed around the project release. This provides a robust framework for managing larger projects. 
+
+Gitflow is ideally suited for projects that have a scheduled release cycle. It assigns very specific roles to different branches and defines how and when they should interact. In addition to `feature` branches, it uses individual branches for preparing, maintaining, and recording releases. 
+
+To make user use Gitflow easily, it provide a git-flow toolset, which is an actual command line tool that has an installation process.  For Debian9:
+
+```shell
+sudo apt install git-flow
+```
+
+Git-flow is a wrapper around Git.
+
+Instead of a single `master` branch, this workflow uses two branches to record the history of the project. The `master` branch stores the official release history, and the `develop` branch serves as an integration branch for features. It's also convenient to tag all commits in the `master` branch with a version number.
+
+![Git flow workflow - Historical Branches](https://wac-cdn.atlassian.com/dam/jcr:2bef0bef-22bc-4485-94b9-a9422f70f11c/02%20(2).svg?cdnVersion=le)
+
+Each new feature should reside in its own branch, which can be pushed to the central repository for backup/collaboration. But, instead of branching off of `master`, `feature` branches use `develop` as their parent branch. When a feature is complete, it gets merged back into develop. Features should never interact directly with `master`. `Feature` branches are generally created off to the latest `develop` branch.
+
+![Git flow workflow - Feature Branches](https://wac-cdn.atlassian.com/dam/jcr:b5259cce-6245-49f2-b89b-9871f9ee3fa4/03%20(2).svg?cdnVersion=le)
+
+Once `develop` has acquired enough features for a release (or a predetermined release date is approaching), you fork a `release`branch off of `develop`. Creating this branch starts the next release cycle, so no new features can be added after this point—only bug fixes, documentation generation, and other release-oriented tasks should go in this branch. Once it's ready to ship, the `release`branch gets merged into `master` and tagged with a version number. In addition, it should be merged back into `develop`, which may have progressed since the release was initiated.
+
+![Git Flow Workflow - Release Branches](https://wac-cdn.atlassian.com/dam/jcr:a9cea7b7-23c3-41a7-a4e0-affa053d9ea7/04%20(1).svg?cdnVersion=le)
+
+Maintenance or `“hotfix”` branches are used to quickly patch production releases. `Hotfix` branches are a lot like `release`branches and `feature` branches except they're based on `master`instead of `develop`. This is the only branch that should fork directly off of `master`. As soon as the fix is complete, it should be merged into both `master` and `develop` (or the current `release`branch), and `master` should be tagged with an updated version number.
+
+![Git flow workflow - Hotfix Branches](https://wac-cdn.atlassian.com/dam/jcr:61ccc620-5249-4338-be66-94d563f2843c/05%20(2).svg?cdnVersion=le)
+
+Demo : without git-flow extensions
+
+```shell
+# ------------------- setup ----------------------
+git branch develop
+# ------------ develop a new feature -------------
+# create a feature branch
+git checkout develop -b feature_branch
+# make some work
+git add <file>
+git commit -m "make some work"
+# finish feature branch
+git checkout develop
+git merge feature_branch
+# --------------- make a release -----------------
+# create a release branch
+git checkout develop -b release/0.1.0
+# make some work
+git add <file>
+git commit -m "make some work"
+# finish release branch
+git checkout master
+git merge release/0.1.0
+# make tag
+git tag v0.1.0 -m "v0.1.0"
+# ---------------- make a hotfix -----------------
+# create a hotfix branch
+git checkout develop -b hotfix_branch
+# make some work
+git add <file>
+git commit -m "make some work"
+# finish hotfix branch
+git checkout master
+git merge hotfix_branch
+git checkout develop
+git merge hotfix_branch
+git branch -D hotfix_branch
+```
+
+Demo: with git-flow extensions
+
+```shell
+# ------------------- setup ----------------------
+git flow init
+# ------------ develop a new feature -------------
+# create a feature branch
+git flow feature start feature_branch
+# make some work
+git add <file>
+git commit -m "make some work"
+# finish feature branch
+git flow feature finish feature_branch
+# --------------- make a release -----------------
+# create a release branch
+git flow release start 0.1.0
+# make some work
+git add <file>
+git commit -m "make some work"
+# finish release branch
+git flow release finish '0.1.0'
+# make tag
+git checkout master
+git tag v0.1.0 -m "v0.1.0"
+# --------------- make a release -----------------
+# create a hotfix branch
+git flow hotfix start hotfix_branch
+# make some work
+git add <file>
+git commit -m "make some work"
+# finish hotfix branch
+git flow hotfix finish hotfix_branch
+```
 
 ## 参考文献
 
-1. 
+1. [Git Tutorals](https://www.atlassian.com/git/tutorials/what-is-version-control)
 2. [GIT团队合作探讨之二--Pull Request](https://www.cnblogs.com/kidsitcn/p/5319282.html)
 3. [Git 内部原理 - Git References](https://git-scm.com/book/zh/v1/Git-%E5%86%85%E9%83%A8%E5%8E%9F%E7%90%86-Git-References)
 4. [Git快照(snapshot)到底该如何理解？或者说如何从文件系统的角度理解快照(snapshot)?](https://segmentfault.com/q/1010000008914409)
 5. [为什么你的 Git 仓库变得如此臃肿](https://www.jianshu.com/p/7231b509c279)
-6. 
+6. [git revert: Why do I get conflicts?](https://stackoverflow.com/questions/46275070/git-revert-why-do-i-get-conflicts)
+7. [3-way(git merge) V.S 2-way(diff-patch)](http://blog.chinaunix.net/uid-26816751-id-4114947.html)
