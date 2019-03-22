@@ -1367,45 +1367,6 @@ Maintenance or `“hotfix”` branches are used to quickly patch production rele
 
 ![Git flow workflow - Hotfix Branches](https://wac-cdn.atlassian.com/dam/jcr:61ccc620-5249-4338-be66-94d563f2843c/05%20(2).svg?cdnVersion=le)
 
-Demo : without git-flow extensions
-
-```shell
-# ------------------- setup ----------------------
-git branch develop
-# ------------ develop a new feature -------------
-# create a feature branch
-git checkout develop -b feature_branch
-# make some work
-git add <file>
-git commit -m "make some work"
-# finish feature branch
-git checkout develop
-git merge feature_branch
-# --------------- make a release -----------------
-# create a release branch
-git checkout develop -b release/0.1.0
-# make some work
-git add <file>
-git commit -m "make some work"
-# finish release branch
-git checkout master
-git merge release/0.1.0
-# make tag
-git tag v0.1.0 -m "v0.1.0"
-# ---------------- make a hotfix -----------------
-# create a hotfix branch
-git checkout develop -b hotfix_branch
-# make some work
-git add <file>
-git commit -m "make some work"
-# finish hotfix branch
-git checkout master
-git merge hotfix_branch
-git checkout develop
-git merge hotfix_branch
-git branch -D hotfix_branch
-```
-
 Demo: with git-flow extensions
 
 ```shell
@@ -1416,7 +1377,7 @@ git flow init
 git flow feature start feature_branch
 # make some work
 git add <file>
-git commit -m "make some work"
+git commit -m "make some develop work"
 # finish feature branch
 git flow feature finish feature_branch
 # --------------- make a release -----------------
@@ -1424,21 +1385,63 @@ git flow feature finish feature_branch
 git flow release start 0.1.0
 # make some work
 git add <file>
-git commit -m "make some work"
+git commit -m "make some release work"
 # finish release branch
 git flow release finish '0.1.0'
-# make tag
-git checkout master
-git tag v0.1.0 -m "v0.1.0"
 # --------------- make a release -----------------
 # create a hotfix branch
 git flow hotfix start hotfix_branch
 # make some work
 git add <file>
-git commit -m "make some work"
+git commit -m "fix some bugs"
 # finish hotfix branch
 git flow hotfix finish hotfix_branch
 ```
+
+Demo : without git-flow extensions
+
+```shell
+# ------------------- setup ----------------------
+git branch develop
+# ------------ develop a new feature -------------
+# create a feature branch
+git checkout develop -b feature/feature_branch
+# make some work
+git add <file>
+git commit -m "make some develop work"
+# finish feature branch
+git checkout develop
+git merge feature/feature_branch
+git branch -d feature/feature_branch
+# --------------- make a release -----------------
+# create a release branch
+git checkout develop -b release/0.1.0
+# make some work
+git add <file>
+git commit -m "make some release work"
+# finish release branch
+git checkout master
+git merge release/0.1.0 --no-ff -m "Merge branch 'release/0.1.0'"
+git tag -a 0.1.0
+git checkout develop
+git merge 0.1.0 --no-ff -m "Merge tag '0.1.0' into develop"
+git branch -d release/0.1.0
+# ---------------- make a hotfix -----------------
+# create a hotfix branch
+git checkout master -b hotfix/hotfix_branch
+# make some work
+git add <file>
+git commit -m "fix some bugs"
+# finish hotfix branch
+git checkout master
+git merge hotfix_branch --no-ff -m "Merge branch 'hotfix/hotfix_branch'"
+git tag -a hotfix_branch
+git checkout develop
+git merge hotfix_branch --no-ff -m "Merge tag '0.1.0' into develop"
+git branch -d hotfix/hotfix_branch
+```
+
+
 
 ## 参考文献
 
