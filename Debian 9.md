@@ -95,6 +95,12 @@ Debian 9支持图形界面安装和字符界面安装两种形式，简易安装
 
   其中username为当前用户名
 
+- 其他
+
+  ```shell
+  sudo apt install net-tools 		# netstat
+  ```
+
 
 
 ## Unix/Linux常用命令
