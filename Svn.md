@@ -464,27 +464,346 @@ After fixing the conflicts, the status of the file is *modified*, so you commit 
 svn commit -m [FOO] "Corrected number of cheese slices."
 ```
 
+### Examining History
 
+Subversion keeps a record of every change ever committed and allows you to explore this history by examining previous versions of files and directories as well as the metadata that accompanies them.
 
+#### Examining the Details of Historical Changes
 
+`svn diff` shows line-level details of a particular change. 
 
+Invoking `svn diff` with no options will compare your working files to the cached “pristine” copies in the `.svn` area:
 
+```shell
+svn diff
+```
 
+If a single `--revision` (`-r`) number is passed, your working copy is compared to the specified revision in the repository:
 
+```shell
+svn diff -r 3 FOO
+```
 
+Comparing between revisions is to separate two revisons by a colon:
 
+```shell
+svn diff -r 2:3 rules.txt
+```
 
+Comparing one revision to the previous revision is to use the `--change` (`-c`) option:
 
+```shell
+svn diff -c 3 FOO
+```
 
+You can compare even when you don't have a working copy on your local machine:
 
+```shell
+svn diff -c 5 http://svn.example.com/repos/example/trunk/text/rules.txt
+```
 
+#### Generating a List of Historical Changes
 
+`svn log` will provide you with a record of who made changes to a file or directory, at what revision it changed, the time and date of that revision.
+
+```shell
+svn log
+```
+
+Note that the log messages are printed in *reverse chronological order* by default. If you wish to see a different range of revisions in a particular order or just a single revision, pass the `--revision` (`-r`) option:
+
+```shell
+svn log -r 5:19
+svn log -r 19:5
+svn log -r 8
+```
+
+You can also examine the log history of a single file or directory
+
+```shell
+svn log FOO
+```
+
+If you make a commit and immediately type `svn log` with no arguments, you may notice that your most recent commit doesn't show up in the list of log messages. It is because that when you commit changes to the repository, *svn* bumps only the revision of files (and directories) that it commits, so usually the parent directory remains at the older revision.
+
+If you want even more information about a file or directory, *svn log* also takes a `--verbose` (`-v`) option.
+
+```shell
+svn log -r 8 -v
+```
+
+If you supply no path, Subversion uses the current working directory as the default target, checking the files underneath but ignoring the subdirectory.
+
+You can integrate a difference report with log report, by passing `--diff`:
+
+```shell
+svn log -r 8 -v --diff
+```
+
+#### Browsing the Repository
+
+You can view various revisions of files and directories without changing the working revision of your working copy. In fact, you don't even need a working copy to use either one.
+
+##### Displaying file contents
+
+You can get the content of a file of a sepecified version:
+
+```shell
+svn cat -r 2 FOO
+```
+
+##### Displaying line-by-line change attribution
+
+`svn blame` (or `svn praise`, `svn annotate`, `svn ann`) shows each line of linear file with the username, the revision number. `svn blame` can be used to find out who modified the file latest.
+
+`svn blame` will by default show line-by-line attribution of the file as it currently appears in the working copy. Lines with no attribution provided, have been modified in the working copy's version of the file.
+
+```shell
+svn blame FOO
+```
+
+You can use the `BASE` revision keyword to instead see the unmodified form of the file as it resides in your working copy.
+
+```shell
+svn blame FOO@BASE
+```
+
+You can also ask `svn blame` to display previous versions of the file.
+
+```shell
+svn blame FOO -r 2
+```
+
+Attempt to run the command on a binary file will cause an error.
+
+##### Listing versioned directories
+
+The *svn list* command shows you what files are in a repository directory without actually downloading the files to your local machine. Pass the `--verbose` (`-v`) flag to get more detailed listing:
+
+```shell
+svn list -v http://svn.example.com/repo/project
+```
+
+#### Fetching Older Repository Snapshots
+
+You can use the `--revision` (`-r`) option with *svn update* to take an entire working copy “back in time”.
+
+```shell
+svn update -r [old_revision]
+```
+
+Notice that, the file are "back in time". Even if you modified the file at this state, you can not commit them. That 's why you can not use `svn update` to 'undo' committed changes.
+
+Use `svn checkout ` to  create a whole new working copy from an older snapshot:
+
+```shell
+# Checkout the trunk from r1729
+svn checkout http://svn.example.com/svn/repo/trunk@1729 trunk-1729
+# Checkout the current trunk as it looked in r1729, (not found difference)
+svn checkout http://svn.example.com/svn/repo/trunk -r 1729 trunk-1729
+```
+
+`svn export` to create a local copy of all or part of your repository without any `.svn` administrative directories included.
+
+```shell
+svn export http://svn.example.com/svn/repo/trunk trunk-export
+svn export http://svn.example.com/svn/repo/trunk@1729 trunk-1729
+svn export http://svn.example.com/svn/repo/trunk -r 1729 trunk-1729
+```
+
+### Dealing with Structural Conflicts
+
+Conflicts may also happen to tree changes. For example, you are modifying a file while your teamate has already committed a rename operation to that file. Subversion can deal with this situation.
+
+The solution of resolving tree conflicts vary from case to case. Please check[使用SVN命令行解决树冲突(tree conflict)](https://www.jianshu.com/p/e3cc83ca512d).
+
+## Branching and Merging
+
+### Using Branches
+
+A branch allows you to save your not-yet-completed work frequently without interfering with others' changes and while still selectively sharing information with your collaborators.
+
+#### Creating a Branch
+
+Creating a branch is very simple—you make a copy of your project tree in the repository using the *svn copy* command. 
+
+Normally, project's source code is rooted in `/**/trunk` directory, and branched are in `/**/branches`.
+
+It's recommended that make a branch by `svn copy` on server side, which is a constant-time operation. Copying a directory on the client side is a linear-time operation, in that it actually has to duplicate every file and subdirectory within that working copy directory on the local disk.
+
+```shell
+svn copy http://svn.example.com/repos/calc/trunk \
+         http://svn.example.com/repos/calc/branches/my-calc-branch \
+         -m "Creating a private branch of /calc/trunk."
+```
+
+Subversion's repository has a special design. When you copy a directory, you don't need to worry about the repository growing huge—Subversion doesn't actually duplicate any data. Instead, it creates a new directory entry that points to an *existing* tree. If you're an experienced Unix user, you'll recognize this as the same concept behind a hard link. As further changes are made to files and directories beneath the copied directory, Subversion continues to employ this hard link concept where it can. It duplicates data only when it is necessary to disambiguate different versions of objects.
+
+This is why you'll often hear Subversion users talk about “cheap copies.” It doesn't matter how large the directory is—it takes a very tiny, constant amount of time and space to make a copy of it. In fact, this feature is the basis of how commits work in Subversion: each revision is a “cheap copy” of the previous revision, with a few items lazily changed within. 
+
+#### Working with Your Branch
+
+Files in different branches (or say, copies) share the same history, but are used as two isolated file later.
+
+### Basic Merging
+
+In Subversion terminology, the general act of replicating changes from one branch to another is called *merging*, and it is performed using various invocations of the *svn merge*subcommand.
+
+#### Keeping a Branch in Sync
+
+While you are developing, your teanmate commit  an important changes to `/trunk`. It's in your best interest to replicate those changes to your own branch, just to make sure they mesh well with your changes. This is done by performing a *sync merge*—a merge operation designed to bring your branch up to date with any changes made to its ancestral parent branch since your branch was created.
+
+To perform a sync merge, first make sure your working copy of the branch is “clean”. Caret (`^`) syntax can be used to avoid having to type out the entire `/trunk` URL. 
+
+```shell
+# cd ^/calc/branches/my-calc-branch
+svn merge ^/calc/trunk
+```
+
+After performing the merge, you might also need to resolve some conflicts. At this point, the wise thing to do is look at the changes carefully with `svn diff`, and then build and test your branch. 
+
+Unlike `svn update`, `.` won't be updated. So if you want to abort all the merge changes:
+
+```shell
+svn revert . -R
+```
+
+If you accept the merge changes or resolve the conflicts, commit the changes with the merge info:
+
+```shell
+svn commit -m "Merged latest trunk changes to my-calc-branch."
+```
+
+Although `svn patch ` seems can make the same performance on linear file, `svn merge` can merge changes on tree structure as well.  Even more important, this command records the changes that have been duplicated to your branch so that Subversion is aware of exactly which changes exist in each location. This is a critical feature that makes branch management usable; without it, users would have to manually keep notes on which sets of changes have or haven't been merged yet.
+
+`svn merge` disable merges into mixed-revision working copies by default. These limitations mean that merges into mixed-revision working copies can result in unexpected text and tree conflicts.  Just update berfore merge:
+
+```shell
+svn update
+svn merge ^/calc/trunk
+```
+
+#### Merge Changesets
+
+`svn merge` would merge changeset r9238 into your working copy.
+
+```shell
+svn merge -c 9238
+```
+
+#### Subtree Merges and Subtree Mergeinfo
+
+While this is a best practice, you may occasionally need to merge directly to some child of the branch root. This type of merge is called a *subtree merge* and the mergeinfo recorded to describe it is called *subtree mergeinfo*.
+
+```shell
+# cd ^/calc/branches/my-calc-branch
+svn merge ^/trunk/doc/INSTALL doc/INSTALL -c 958
+```
+
+#### Reintegrating a Branch
+
+After work for the new feature has been done, pull the changes of trunk, check it. If ok, commit it:
+
+```shell
+# cd ^/calc/branches/my-calc-branch
+svn merge ^/calc/trunk
+# build, test
+svn commit -m "Final merge of trunk changes to my-calc-branch."
+```
+
+Then, replicate your branch changes back into the trunk. 
+
+```shell
+# cd ^/calc/trunk
+svn update
+svn merge --reintegrate ^/calc/branches/my-calc-branch
+# build, test, verify, ...
+svn commit -m "Merge my-calc-branch back into trunk!"
+```
+
+Merging branch into trunk is quite different with merging trunk to branch. Merging trunk to branch is straightforward. It just grab the changes of a contiguous range from the trunk, eg. r345:r356, and duplicate them to branch. However, when merging your branch back to the trunk, Svn cannot find a contiguously range. The feature branch is now a mishmash of both duplicated trunk changes and private branch changes. So, it can not use the same mathmatics with formmer. By specifying the `--reintegrate` option, you're asking Subversion to carefully replicate *only* those changes unique to your branch.
+
+After reintergrate, the feature branch can be and good to be removed:
+
+```shell
+svn delete http://svn.example.com/repos/calc/branches/my-calc-branch \
+             -m "Remove my-calc-branch, reintegrated with trunk in r391."
+```
+
+#### Mergeinfo and Previews
+
+The basic mechanism Subversion uses to track changesets is by recording data in versioned properties. 
+
+Specifically, merge data is tracked in the `svn:mergeinfo` property attached to files and directories.
+
+```shell
+# cd ^/calc/branches/my-calc-branch
+svn propget svn:mergeinfo .
+```
+
+The `svn:mergeinfo` property is automatically maintained by Subversion whenever you run *svn merge*. Its value indicates which changes made to a given path have been replicated into the directory in question. 
+
+Subversion also provides a subcommand, `svn mergeinfo`, which is helpful in seeing not only which changesets a directory has absorbed, but also which changesets it's still eligible to receive. 
+
+The `svn mergeinfo` command requires a “source” URL (where the changes come from), and takes an optional “target”URL (where the changes merge to). If no target URL is given, it assumes that the current working directory is the target.
+
+```shell
+# Which changes have already been merged from trunk to branch?
+svn mergeinfo ^/calc/trunk --show-revs merged
+# Which changes are still eligible to merge from trunk to branch?
+svn mergeinfo ^/calc/trunk --show-revs eligible
+# an abstract graph display
+svn mergeinfo ^/calc/trunk
+```
+
+#### Undoing changes
+
+Another use for `svn merge` is to roll back a change that has already been commited, since `svn revert` can not deal this situation. `svn merge ` not only can add the diff but also can remove the diff.
+
+```shell
+svn merge url -c -33 ./ # remove the change of r33 in url
+```
+
+#### Resurrecting Deleted Items
+
+Since theinformation in Svn repo is never lost, you can get your deleted file or directory back. Every object in the repository exists in a sort of two-dimensional coordinate system. The first coordinate is a particular revision tree, and the second coordinate is a path within that tree. 
+
+First, use `svn log -v` to find out the revision that delete the file, and then `svn copy ` the file of that revision to the current working copy. 
+
+```shell
+cd ^/calc/trunk  # parent-dir
+svn log -p
+```
+
+Then, get your file back. If the deletion of the file is the whole content of that revision change, you can use `svn merge` undo the changes to get the deleted file back. If there are a few operation of other files, you can use `svn revert` to discard the change.
+
+```shell
+svn merge ^/calc/trunk -c -[rid]
+svn revert other-files
+```
+
+If the deletion is only the little part, you can use `svn copy` to simiply get the specified file back. 
+
+```shell
+svn copy ^/calc/trunk/deleted-file@[rid] ./deleted-file
+```
+
+The file that `svn copy` isn't really new. It's a direct descendant of the original, deleted file. Subversion copys it and remembers this operation. In the future, running `svn log` on this file will traverse back through the file's resurrection and through all the history it had prior to revision 807.
+
+You can also create a new file with the same content of the deleted file, by using `svn copy`.
+
+```shell
+svn cat ^/calc/trunk/deleted-file@[rid] > ./deleted-file
+svn add deleted-file
+```
 
 
 
 ## 参考文献
 
-1. 
+1. [Version Control with Subversion](http://svnbook.red-bean.com/en/1.7/index.html)
 2. [SVN 创建仓库操作](http://www.runoob.com/svn/svn-create-repo.html)
 3. [centos搭建svn，解决认证失败问题](https://blog.csdn.net/wq3028/article/details/81459643)
-4. 
+4. [svn server运行和解决条目不可读问题 svn: E200001](https://www.158code.com/article/172)
+5. [使用SVN命令行解决树冲突(tree conflict)](https://www.jianshu.com/p/e3cc83ca512d)
+6. [SVN：代码回滚问题与switch](https://blog.51cto.com/janephp/1300561)
