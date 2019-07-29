@@ -1388,7 +1388,7 @@ git add <file>
 git commit -m "make some release work"
 # finish release branch
 git flow release finish '0.1.0'
-# --------------- make a release -----------------
+# --------------- make a hotfix -----------------
 # create a hotfix branch
 git flow hotfix start hotfix_branch
 # make some work

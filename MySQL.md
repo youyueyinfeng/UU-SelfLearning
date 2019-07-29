@@ -142,7 +142,16 @@ mysqladmin shutdown
 
 1. [MySQL 5.7 Reference Manual](http://dev.mysql.com/doc/refman/5.7/en/index.html)
 2. [Linux连接mysql报错：Access denied for user ‘root’@‘localhost’(using password: YES)的解决方法](https://www.cnblogs.com/luoa/p/10843980.html)
-3. 
+4. [第一、第二、第三范式之间的理解和比较](https://www.cnblogs.com/ktao/p/7775100.html)
+5. [第一范式，第二范式，第三范式，BCNF范式理解](https://blog.csdn.net/u013164931/article/details/79692402)
+5. [Mysql数据库外键基础知识和操作](http://www.sohu.com/a/238219087_100192631)
+6. [MySQL外键约束（FOREIGN KEY）](http://c.biancheng.net/view/2441.html)
+7. [mysql 外键（foreign key）的详解和实例](https://blog.csdn.net/qq_34306360/article/details/79717682)
+8. [MySQL的JOIN（一）：用法](https://www.cnblogs.com/fudashi/p/7491039.html)
+9. [SQL系列（九）—— 子查询（subQuery）](https://www.cnblogs.com/lxyit/p/9322280.html)
+10. [MySQL入门 (九) : 子查询 Subquery](https://justcoding.iteye.com/blog/2321556)
+
+
 
 
 

@@ -192,7 +192,7 @@ else:
 If statement can be shorten into one line when its body is simple:
 
 ```python
-x = 0 if x < 0 other x
+x = 0 if x < 0 else x
 ```
 
 ### `for` Statements
@@ -1904,13 +1904,15 @@ y = eggs
 4. [python3 deque（双向队列）的详细介绍](https://www.php.cn/python-tutorials-358240.html)
 5. [Python Enclosing作用域、闭包、装饰器话聊上篇](https://segmentfault.com/a/1190000006236947?utm_source=tag-newest)
 6. [Python Enclosing作用域、闭包、装饰器话聊下篇](https://segmentfault.com/a/1190000006659077)
-7. [python生成器yield和send](https://www.cnblogs.com/xhcdream/p/8304953.html)
-8. [python函数传参是传值还是传引用？](https://www.cnblogs.com/loleina/p/5276918.html)
-9. [Python 函数中，参数是传值，还是传引用？](https://www.cnblogs.com/shizhengwen/p/6972183.html)
-10. [比较运算符在Python和C / C ++中的优先级(comparison operators' priority in Python vs C/C++)](http://www.it1352.com/490485.html)
-11. [python 多继承与继承原理及多继承中super本质](https://blog.csdn.net/sinat_38068807/article/details/86498814)
-12. [][python的动态性和_slot_][python的动态性和_slot_](https://www.cnblogs.com/alexzhang92/p/9416869.html)
-13. [Python内存管理机制及优化简析](http://kkpattern.github.io/2015/06/20/python-memory-optimization-zh.html)
-14. [从0到1，Python异步编程的演进之路](https://zhuanlan.zhihu.com/p/25228075)
-15. [Python Async/Await入门指南](https://zhuanlan.zhihu.com/p/27258289)
+7. [简单了解Python装饰器实现原理](https://blog.csdn.net/MonaLisaTearr/article/details/80661937)
+8. [装饰器-廖雪峰](https://www.liaoxuefeng.com/wiki/897692888725344/923030163290656)
+9. [python生成器yield和send](https://www.cnblogs.com/xhcdream/p/8304953.html)
+10. [python函数传参是传值还是传引用？](https://www.cnblogs.com/loleina/p/5276918.html)
+11. [Python 函数中，参数是传值，还是传引用？](https://www.cnblogs.com/shizhengwen/p/6972183.html)
+12. [比较运算符在Python和C / C ++中的优先级(comparison operators' priority in Python vs C/C++)](http://www.it1352.com/490485.html)
+13. [python 多继承与继承原理及多继承中super本质](https://blog.csdn.net/sinat_38068807/article/details/86498814)
+14. [][python的动态性和_slot_][python的动态性和_slot_](https://www.cnblogs.com/alexzhang92/p/9416869.html)
+15. [Python内存管理机制及优化简析](http://kkpattern.github.io/2015/06/20/python-memory-optimization-zh.html)
+16. [从0到1，Python异步编程的演进之路](https://zhuanlan.zhihu.com/p/25228075)
+17. [Python Async/Await入门指南](https://zhuanlan.zhihu.com/p/27258289)
 
