@@ -112,6 +112,12 @@ Start the mysql service with the user 'mysql'.
 mysqld --user=root &
 ```
 
+Or use `systemctl` to control mysql service.
+
+```shell
+sudo systemctl start mysqld
+```
+
 Use `mysqladmin` to test whether the service is usable.
 
 ```
@@ -127,6 +133,110 @@ mysqladmin shutdown
 
 
 ## Tutorial
+
+
+
+
+
+## Python Mysql-Connector
+
+
+
+### Session Operation
+
+To manage MySQL transactions in python follow these steps: –
+
+- Create MySQL database connections in python.
+- Prepare the SQL queries that you want to run as a part of a transaction. For example for bank transfer, we can combine two SQL queries(withdrawal money and deposit money query) in a single transaction.
+- Set an auto-commit property of MySQL connection to false.
+- Execute all queries one by one using cursor.execute()
+- If all queries execute successfully `commit` the changes to the database
+- If one of the queries failed to execute `rollback` all the changes.
+- Catch any SQL exceptions that may occur during this process
+- Close the cursor object and MySQL database connection
+
+
+
+### Exception
+
+- **errors.Error Exception**
+
+This exception is the base class for all other exceptions in the `errors` module. It can be used to catch all errors in a single `except` statement.
+
+```python
+import mysql.connector
+
+try:
+  cnx = mysql.connector.connect(user='scott', database='employees')
+  cursor = cnx.cursor()
+  cursor.execute("SELECT * FORM employees")   # Syntax error in query
+  cnx.close()
+except mysql.connector.Error as err:
+  print("Something went wrong: {}".format(err))
+```
+
+- **errors.DataError Exception**
+
+This exception is raised when there were problems with the data. Examples are a column set to `NULL` that cannot be `NULL`, out-of-range values for a column, division by zero, column count does not match value count, and so on.
+
+- **errors.ProgrammingError Exception**
+
+This exception is raised on programming errors, for example when you have a syntax error in your SQL or a table was not found.
+
+```python
+try:
+  cursor.execute("CREATE DESK t1 (id int, PRIMARY KEY (id))")
+except mysql.connector.ProgrammingError as err:
+  if err.errno == errorcode.ER_SYNTAX_ERROR:
+    print("Check your syntax!")
+  else:
+    print("Error: {}".format(err))
+```
+
+- **errors.IntegrityError Exception**
+
+This exception is raised when the relational integrity of the data is affected. For example, a duplicate key was inserted or a foreign key constraint would fail.
+
+```python
+cursor.execute("CREATE TABLE t1 (id int, PRIMARY KEY (id))")
+try:
+  cursor.execute("INSERT INTO t1 (id) VALUES (1)")
+  cursor.execute("INSERT INTO t1 (id) VALUES (1)")
+except mysql.connector.IntegrityError as err:
+  print("Error: {}".format(err))
+```
+
+- **errors.InternalError Exception**
+
+This exception is raised when the MySQL server encounters an internal error, for example, when a deadlock occurred.
+
+- **errors.OperationalError Exception**
+
+This exception is raised for errors which are related to MySQL's operations. For example: too many connections; a host name could not be resolved; bad handshake; server is shutting down, communication errors.
+
+- **errors.PoolError Exception**
+
+This exception is raised for connection pool errors.
+
+- **errors.InterfaceError Exception**
+
+This exception is raised for errors originating from Connector/Python itself, not related to the MySQL server.
+
+-  **errors.NotSupportedError Exception**
+
+This exception is raised when some feature was used that is not supported by the version of MySQL that returned the error. It is also raised when using functions or statements that are not supported by stored routines.
+
+- **errors.DatabaseError Exception**
+
+This exception is the default for any MySQL error which does not fit the other exceptions.
+
+
+
+
+
+
+
+
 
 
 

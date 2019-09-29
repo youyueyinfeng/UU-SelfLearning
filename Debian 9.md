@@ -77,8 +77,9 @@ Debian 9支持图形界面安装和字符界面安装两种形式，简易安装
   ```shell
   su
   apt install vim
-  ```
-
+  echo -e "set mouse=i\nsyntax on" > ~/.vimrc
+```
+  
 - 安装sudo
 
   ```shell
@@ -239,3 +240,4 @@ sudo systemctl reload nginx.service
 8. [如何在Debian 9上安装Nginx](http://linux265.com/news/3367.html)
 9. [在Debian上安装Nginx并搭建一个最简单的静态网站服务器](http://ourjs.com/detail/5834f6716345657c15b8db95)
 10. [Debian系统下使用自带的Fcitx配置中文输入法](https://blog.csdn.net/wu58430/article/details/81117721)
+11. 
